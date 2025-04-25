@@ -12,7 +12,8 @@ def alkashi(a, b, c, sign=1):
     return sign * math.acos(min(1, max(-1, (a ** 2 + b ** 2 - c ** 2) / (2 * a * b))))
 
 
-def set_default_parameters(l1: float, l2: float, l3: float, use_rads: bool, use_mm: bool, constants: Constants):
+def set_default_parameters(l1: float, l2: float, l3: float, use_rads: bool, use_mm: bool, sign: int,
+                           constants: Constants):
     if not isinstance(constants, Constants):
         raise TypeError("L'argument 'constants' doit être un objet de type Constants")
     l1 = constants.constL1 if l1 is None else l1
@@ -20,7 +21,8 @@ def set_default_parameters(l1: float, l2: float, l3: float, use_rads: bool, use_
     l3 = constants.constL3 if l3 is None else l3
     use_rads = constants.USE_RADS_INPUT if use_rads is None else use_rads
     use_mm = constants.USE_MM_OUTPUT if use_mm is None else use_mm
-    return l1, l2, l3, use_rads, use_mm
+    sign = constants.DEFAULT_COMPUTE_IK_SIGN if sign is None else sign
+    return l1, l2, l3, use_rads, use_mm, sign
 
 
 def computeDK(
@@ -34,8 +36,8 @@ def computeDK(
         use_rads: bool = None,
         use_mm: bool = None,
 ):
-    l1, l2, l3, use_rads, use_mm = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
-                                                          constants=constants)
+    l1, l2, l3, use_rads, use_mm, _ = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
+                                                             sign=-1, constants=constants)
     angle_unit = 1
     dist_unit = 1
     if not (use_rads):
@@ -66,8 +68,8 @@ def computeDKDetailed(
         use_rads: bool = None,
         use_mm: bool = None,
 ):
-    l1, l2, l3, use_rads, use_mm = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
-                                                          constants=constants)
+    l1, l2, l3, use_rads, use_mm, _ = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
+                                                             sign=-1, constants=constants)
     theta1_verif = theta1
     theta2_verif = theta2
     theta3_verif = theta3
@@ -104,7 +106,8 @@ def computeDKDetailed(
     ]
     p3 = [x * dist_unit, y * dist_unit, z * dist_unit]
     p3_verif = computeDK(
-        theta1=theta1_verif, theta2=theta2_verif, theta3=theta3_verif, l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm, constants=constants
+        theta1=theta1_verif, theta2=theta2_verif, theta3=theta3_verif, l1=l1, l2=l2, l3=l3, use_rads=use_rads,
+        use_mm=use_mm, constants=constants
     )
     if (p3[0] != p3_verif[0]) or (p3[1] != p3_verif[1]) or (p3[2] != p3_verif[2]):
         print(
@@ -126,11 +129,13 @@ def computeIK(
         l3=None,
         verbose=False,
         use_rads=None,
-        sign=-1,
+        sign=None,
         use_mm=None,
 ):
-    l1, l2, l3, use_rads, use_mm = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
-                                                          constants=constants)
+    l1, l2, l3, use_rads, use_mm, sign = set_default_parameters(l1=l1, l2=l2, l3=l3, use_rads=use_rads, use_mm=use_mm,
+                                                                sign=sign, constants=constants)
+
+    # print(f"l1 : {l1}, l2 : {l2}, l3 : {l3}, use_rads : {use_rads}, use_mm : {use_mm}")
     dist_unit = 1
     if use_mm:
         dist_unit = 0.001
@@ -146,6 +151,7 @@ def computeIK(
     d = math.sqrt(math.pow(xp, 2) + math.pow(z, 2))
     theta2 = alkashi(l2, d, l3, sign=sign) - constants.Z_DIRECTION * math.atan2(z, xp)
     theta3 = math.pi + alkashi(l2, l3, d, sign=sign)
+    # print(f"Z_DIRECTION : {constants.Z_DIRECTION}, d : {d}, xp : {xp}, sign : {sign}")
 
     if use_rads:
 
@@ -160,6 +166,7 @@ def computeIK(
         ]
 
     else:
+        # print(f"THETA1_MOTOR_SIGN : {constants.THETA1_MOTOR_SIGN}, theta2 : {theta2}, theta3 : {theta3}")
         result = [
             angleRestrict(constants.THETA1_MOTOR_SIGN * math.degrees(theta1), use_rads=use_rads),
             angleRestrict(
@@ -177,11 +184,11 @@ def computeIK(
                 x, y, z, result[0], result[1], result[2],
             )
         )
-
+    # print(f"result : {result}")
     return result
 
 
-def computeIKOriented(x: float, y: float, z: float, leg_id: int, constants: Constants, params=None,
+def computeIKOriented(x: float, y: float, z: float, leg_id: int, constants: Constants, params,
                       extra_theta: float = 0):
     """
     Oriented IK function for the leg leg_id of the robot.
@@ -199,9 +206,29 @@ def computeIKOriented(x: float, y: float, z: float, leg_id: int, constants: Cons
     :param extra_theta:
     :return: (theta1, theta2, theta3)
     """
-    pos = rotaton_2D(x, y, z, -constants.LEG_ANGLES[leg_id - 1] - extra_theta)
-    return computeIK(constants.LEG_END_POS[leg_id - 1][0] + pos[0], constants.LEG_END_POS[leg_id - 1][1] + pos[1],
-                     constants.LEG_END_POS[leg_id - 1][2] + pos[2], constants=constants)
+    if leg_id < 1 or leg_id > 6:
+        raise RuntimeError("ERROR unknown legID '{}'".format(leg_id))
+    if not isinstance(constants, Constants):
+        raise TypeError("L'argument 'constants' doit être un objet de type Constants")
+
+    theta = params.legAngles[leg_id - 1]
+
+    theta = theta + extra_theta
+    # Applying a rotation
+    new_x, new_y, _ = rotaton_2D(x, y, z, -theta)
+    # print(f"new_x : {new_x}, new_y : {new_y}, theta : {theta}")
+    # print(
+    #     f"x : {new_x + params.initLeg[leg_id - 1][0]}, y : {new_y + params.initLeg[leg_id - 1][1]}, z : {z + params.z}")
+
+    return computeIK(
+        x=new_x + params.initLeg[leg_id - 1][0],
+        y=new_y + params.initLeg[leg_id - 1][1],
+        z=z + params.z,
+        constants=constants,
+    )
+    # pos = rotaton_2D(x, y, z, -constants.LEG_ANGLES[leg_id - 1] - extra_theta)
+    # return computeIK(constants.LEG_END_POS[leg_id - 1][0] + pos[0], constants.LEG_END_POS[leg_id - 1][1] + pos[1],
+    #                  constants.LEG_END_POS[leg_id - 1][2] + pos[2], constants=constants)
 
 
 def angleRestrict(angle, use_rads=False):
@@ -247,21 +274,23 @@ def circle(x, z, rayon, t, duration):
 
 
 def segmentByPercent(segment_x1, segment_y1, segment_z1, segment_x2, segment_y2, segment_z2, percent,
-                     index_leg: int = None, leg_angle: float = 0):
+                     constants: Constants,
+                     index_leg: int = None, leg_angle: float = 0, params=None):
     x = segment_x1 + (segment_x2 - segment_x1) * percent
     y = segment_y1 + (segment_y2 - segment_y1) * percent
     z = segment_z1 + (segment_z2 - segment_z1) * percent
     if index_leg is not None:
-        return computeIKOriented(x, y, z, leg_id=index_leg, extra_theta=leg_angle)
+        return computeIKOriented(x, y, z, leg_id=index_leg, extra_theta=leg_angle, params=params, constants=constants)
     return computeIK(x, y, z)
 
 
-def segment(segment_x1, segment_y1, segment_z1, segment_x2, segment_y2, segment_z2, t, duration):
+def segment(segment_x1, segment_y1, segment_z1, segment_x2, segment_y2, segment_z2, t, duration, constants: Constants):
     percent = t % duration / duration if t % (2 * duration) < duration else 1 - t % duration / duration
-    return segmentByPercent(segment_x1, segment_y1, segment_z1, segment_x2, segment_y2, segment_z2, percent)
+    return segmentByPercent(segment_x1, segment_y1, segment_z1, segment_x2, segment_y2, segment_z2, percent,
+                            constants=constants)
 
 
-def triangle(x, z, h, w, t, index_leg: int = None, leg_angle: float = 0):
+def triangle(x, z, h, w, t, constants: Constants, index_leg: int = None, leg_angle: float = 0, params=None):
     point1 = (x, 0, z)
     point2 = (x, w, z)
     point3 = (x, w / 2, z + h)
@@ -276,11 +305,11 @@ def triangle(x, z, h, w, t, index_leg: int = None, leg_angle: float = 0):
     if t_cycle < duration1:
         percent = t_cycle / duration1
         return segmentByPercent(point1[0], point1[1], point1[2], point2[0], point2[1], point2[2], percent,
-                                index_leg=index_leg, leg_angle=leg_angle)
+                                index_leg=index_leg, leg_angle=leg_angle, params=params, constants=constants)
     elif t_cycle < duration1 + duration2:
         percent = (t_cycle - duration1) / duration2
         return segmentByPercent(point2[0], point2[1], point2[2], point3[0], point3[1], point3[2], percent,
-                                index_leg=index_leg, leg_angle=leg_angle)
+                                index_leg=index_leg, leg_angle=leg_angle, params=params, constants=constants)
     percent = (t_cycle - duration1 - duration2) / duration3
     return segmentByPercent(point3[0], point3[1], point3[2], point1[0], point1[1], point1[2], percent,
-                            index_leg=index_leg, leg_angle=leg_angle)
+                            index_leg=index_leg, leg_angle=leg_angle, params=params, constants=constants)

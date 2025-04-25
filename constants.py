@@ -9,6 +9,7 @@ Values in this file should however always be written in meters and in rads.
 class Constants:
     def __init__(self):
 
+        self.DEFAULT_COMPUTE_IK_SIGN = -1
         self.BIOLOID = "BIOLOID"
         self.PHANTOMX = "PHANTOMX"
         self.PHANTOMX_SIMULATION = "PHANTOMX_SIMULATION"
@@ -99,7 +100,16 @@ class Constants:
                 (0.2, 0, -0.05),
                 (0.2, 0, -0.05),
             ]
-            self.LIST_OF_INVERTED_IDS = [22, 23, 32, 33, 42, 43]
+            self.LEG_CENTER_POS = [
+                (0.1248, 0.06164, 0.001116),
+                (0.1248, -0.06164, 0.001116),
+                (0, -0.1034, 0.001116),
+                (-0.1248, -0.06164, 0.001116),
+                (-0.1248, 0.06164, 0.001116),
+                (0, 0.1034, 0.001116),
+            ]
+            self.DEFAULT_COMPUTE_IK_SIGN = 1
+            # self.LIST_OF_INVERTED_IDS = [22, 23, 32, 33, 42, 43]
         elif self.ROBOT_TYPE == self.BIOLOID:
             self.constL1 = 0.001 * 51
             self.constL2 = 0.001 * 63.7

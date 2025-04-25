@@ -9,8 +9,6 @@ from onshape_to_robot.simulation import Simulation
 from kinematics_empty import *
 from scipy.spatial.transform import Rotation
 
-LIST_OF_INVERTED_IDS = [11, 12, 13, 51, 52, 53, 61, 62, 63]
-
 
 class Parameters:
     def __init__(
@@ -123,9 +121,7 @@ class SimpleRobot:
     def __repr__(self):
         output = "##### Robot #####\n"
         for k, v in self.legs.items():
-            output += "# Leg{}: [{:.2f}] [{:.2f}] [{:.2f}]\n".format(
-                k, v[0], v[1], v[2]
-            )
+            output += "# Leg{}: [{}] [{}] [{}]\n".format(k, v[0], v[1], v[2])
         return output
 
     def print_dk(self, constants: Constants):
@@ -163,9 +159,9 @@ class SimpleRobot:
 
         print(output)
 
-    def init(self):
+    def init(self, constants: Constants):
         """Sets the goal_position to the present_position"""
-        self.tick_read(verbose=True)
+        self.tick_read(constants, verbose=True)
         for k, v in self.legs.items():
             v[0].goal_position = v[0].present_position
             v[1].goal_position = v[1].present_position
@@ -206,7 +202,7 @@ class SimpleRobot:
         time.sleep(self.delay_after_write)
         print(f"Torques disabled for ids: {list_of_ids}")
 
-    def tick_read(self, verbose=False):
+    def tick_read(self, constants: Constants, verbose=False):
         # Creating a list for a read request
         to_read = []
         for k, v in self.legs.items():
@@ -224,13 +220,13 @@ class SimpleRobot:
             for m in self.motors():
                 factor = 1.0
                 if m.id == id:
-                    if id in LIST_OF_INVERTED_IDS:
+                    if id in constants.LIST_OF_INVERTED_IDS:
                         factor = -1.0
                     m.present_position = value * factor
         if verbose:
             print("Read tick done")
 
-    def tick_write(self, verbose=False):
+    def tick_write(self, constants: Constants, verbose=False):
         # Creating a dict for a write request
         to_write = {}
         for k, v in self.legs.items():
@@ -240,7 +236,7 @@ class SimpleRobot:
                     if v[i].goal_position <= -150 or v[i].goal_position >= 150:
                         continue
                 factor = 1.0
-                if v[i].id in LIST_OF_INVERTED_IDS:
+                if v[i].id in constants.LIST_OF_INVERTED_IDS:
                     factor = -1.0
                 to_write[v[i].id] = v[i].goal_position * factor
 
@@ -251,16 +247,16 @@ class SimpleRobot:
             print("Write tick done")
         time.sleep(self.delay_after_write)
 
-    def tick_read_and_write(self, verbose=False):
+    def tick_read_and_write(self, constants: Constants, verbose=False):
         # Creating a list for a read request and a dict for a write request
-        self.tick_read()
-        self.tick_write()
+        self.tick_read(constants)
+        self.tick_write(constants)
         if verbose:
             print("IO tick done")
 
     def smooth_tick_read_and_write(self, delay, constants: Constants, verbose=False):
         # Reads the current state of the robot and applies the write positions smoothly over 'time'
-        self.tick_read()
+        self.tick_read(constants)
         # Setting the start and end positions
         t0 = time.time()
         for m in self.motors():
@@ -279,12 +275,12 @@ class SimpleRobot:
                 m.goal_position = (t / delay) * (
                         m.smooth_final_position - m.smooth_start_position
                 ) + m.smooth_start_position
-            self.tick_write(verbose=verbose)
+            self.tick_write(constants, verbose=verbose)
             t = time.time() - t0
         for m in self.motors():
             m.goal_position = m.smooth_final_position
-        self.tick_write(verbose=verbose)
-        self.tick_read()
+        self.tick_write(constants, verbose=verbose)
+        self.tick_read(constants)
         self.print_dk(constants=constants)
         if verbose:
             print("IO smooth tick done")
@@ -481,7 +477,7 @@ class SimpleRobotSimulation:
                 pos[0],
                 pos[1],
                 pos[2],
-                self.params.legAngles[i] + yaw,
+                constants.LEG_ANGLES[i] + yaw,
             )
             leg_center_position = rotaton_2D(
                 self.constants.LEG_CENTER_POS[i][0],
@@ -776,13 +772,16 @@ def myTriangle(x: float, z: float, h: float, w: float, params, leg_id,
     if leg_angle is None:
         return
     if leg_id % 2 == 0:
-        alphas = triangle(x, z, h, w, get_time(sim) * speed, index_leg=leg_id, leg_angle=leg_angle)
+        alphas = triangle(x, z, h, w, get_time(sim) * speed, index_leg=leg_id, leg_angle=leg_angle, params=params,
+                          constants=constants)
     else:
-        alphas = triangle(x, z, h, w, get_time(sim) * speed + 1.0, index_leg=leg_id, leg_angle=leg_angle)
+        alphas = triangle(x, z, h, w, get_time(sim) * speed + 1.0, index_leg=leg_id, leg_angle=leg_angle, params=params,
+                          constants=constants)
 
     robot.legs[leg_id][0].goal_position = alphas[0]
     robot.legs[leg_id][1].goal_position = alphas[1]
     robot.legs[leg_id][2].goal_position = alphas[2]
+    print(robot)
     if type(robot) is SimpleRobot:
         return
     pos = computeDK(alphas[0], alphas[1], alphas[2], use_rads=True, constants=constants)
@@ -859,7 +858,9 @@ def run_triangle(controls, controller, myEvent, robot, sim, params, isSim, const
         w = 0.05
         speed = 1
     controller_angle, speed_multiplier = get_controller_input(controller, constants=constants)
-    leg_angle = controller_angle if controller_angle is not None else getAngleDirection(myEvent)
+    print(controller_angle, speed_multiplier)
+    leg_angle = controller_angle if controller_angle is not None else (getAngleDirection(
+        myEvent) if sim is not None else 0)
 
     if speed_multiplier is not None:
         speed *= speed_multiplier
@@ -870,10 +871,10 @@ def run_triangle(controls, controller, myEvent, robot, sim, params, isSim, const
                    leg_angle=leg_angle, speed=speed, constants=constants)
 
 
-def run_direct(sim, robot, params):
+def run_direct(sim, robot, params, constants: Constants):
     val = 0.05 * math.sin(get_time(sim) * 2)
     for i in range(1, 7):
-        alphas = computeIKOriented(val, 0, 0, i, params)
+        alphas = computeIKOriented(val, 0, 0, i, constants, params)
         robot.legs[i][0].goal_position = alphas[0]
         robot.legs[i][1].goal_position = alphas[1]
         robot.legs[i][2].goal_position = alphas[2]
