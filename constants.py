@@ -25,24 +25,33 @@ class Constants:
         self.constL1 = 0.001 * 54.8
         self.constL2 = 0.001 * 65.3
         self.constL3 = 0.001 * 133
-        self.theta2Correction = 16.0 * math.pi / 180.0
+        self.theta2Correction = 10.0
         self.theta2ExtraCorrection = 0
-        self.theta3Correction = 43.76 * math.pi / 180.0  # -theta2Correction ??
+        self.theta3Correction = 33.0
         self.THETA3_MOTOR_SIGN = 1
-        self.THETA2_MOTOR_SIGN = -1
+        self.THETA2_MOTOR_SIGN = 1
         self.THETA1_MOTOR_SIGN = 1
         self.USE_RADS_INPUT = False
         self.USE_RADS_OUTPUT = False
-        self.USE_MM_INPUT = False
-        self.USE_MM_OUTPUT = False
-        self.Z_DIRECTION = -1
+        self.USE_MM_INPUT = True
+        self.USE_MM_OUTPUT = True
+        self.Z_DIRECTION = 1
         self.LEG_ANGLES = [
-            -math.pi / 4,
             math.pi / 4,
-            math.pi / 2,
-            3 * math.pi / 4,
-            -3 * math.pi / 4,
+            -math.pi / 4,
             -math.pi / 2,
+            -3 * math.pi / 4,
+            3 * math.pi / 4,
+            math.pi / 2,
+        ]
+        self.LIST_OF_INVERTED_IDS = [22, 23, 32, 33, 42, 43]
+        self.LEG_CENTER_POS = [
+            (0.1248, 0.06164, 0.001116),
+            (0.1248, -0.06164, 0.001116),
+            (0, -0.1034, 0.001116),
+            (-0.1248, -0.06164, 0.001116),
+            (-0.1248, 0.06164, 0.001116),
+            (0, 0.1034, 0.001116),
         ]
         self.LEG_END_POS = [
             (0.2, 0, -0.05),
@@ -63,24 +72,24 @@ class Constants:
             self.constL1 = 0.001 * 54.8
             self.constL2 = 0.001 * 65.3
             self.constL3 = 0.001 * 133
-            self.theta2Correction = 16.0 * math.pi / 180.0
+            self.theta2Correction = 10.0
             self.theta2ExtraCorrection = 0
-            self.theta3Correction = 43.76 * math.pi / 180.0  # -theta2Correction ??
+            self.theta3Correction = 33.0
             self.THETA3_MOTOR_SIGN = 1
-            self.THETA2_MOTOR_SIGN = -1
+            self.THETA2_MOTOR_SIGN = 1
             self.THETA1_MOTOR_SIGN = 1
             self.USE_RADS_INPUT = False
             self.USE_RADS_OUTPUT = False
-            self.USE_MM_INPUT = False
-            self.USE_MM_OUTPUT = False
-            self.Z_DIRECTION = -1
+            self.USE_MM_INPUT = True
+            self.USE_MM_OUTPUT = True
+            self.Z_DIRECTION = 1
             self.LEG_ANGLES = [
-                -math.pi / 4,
                 math.pi / 4,
-                math.pi / 2,
-                3 * math.pi / 4,
-                -3 * math.pi / 4,
+                -math.pi / 4,
                 -math.pi / 2,
+                -3 * math.pi / 4,
+                3 * math.pi / 4,
+                math.pi / 2,
             ]
             self.LEG_END_POS = [
                 (0.2, 0, -0.05),
@@ -90,6 +99,7 @@ class Constants:
                 (0.2, 0, -0.05),
                 (0.2, 0, -0.05),
             ]
+            self.LIST_OF_INVERTED_IDS = [22, 23, 32, 33, 42, 43]
         elif self.ROBOT_TYPE == self.BIOLOID:
             self.constL1 = 0.001 * 51
             self.constL2 = 0.001 * 63.7
