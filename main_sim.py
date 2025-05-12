@@ -21,6 +21,13 @@ def main():
         default="simulation",
         help="Available modes : simulation, robot",
     )
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=str,
+        default="/dev/ttyACM0",
+        help="Port for the robot",
+    )
     robot: utils.SimpleRobotSimulation | utils.SimpleRobot = None
     constants = Constants()
     try:
@@ -45,7 +52,7 @@ def main():
 
 
         else:
-            dxl_io = pypot.dynamixel.DxlIO('/dev/ttyACM0', baudrate=1000000)
+            dxl_io = pypot.dynamixel.DxlIO(args.port, baudrate=1000000)
             sim = None
             constants.ROBOT_TYPE = constants.PHANTOMX
             constants.update()
