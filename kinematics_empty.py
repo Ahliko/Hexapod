@@ -219,6 +219,10 @@ def computeIKOriented(x: float, y: float, z: float, leg_id: int, constants: Cons
     # print(f"new_x : {new_x}, new_y : {new_y}, theta : {theta}")
     # print(
     #     f"x : {new_x + params.initLeg[leg_id - 1][0]}, y : {new_y + params.initLeg[leg_id - 1][1]}, z : {z + params.z}")
+    if constants.USE_MM_OUTPUT:
+        new_x = new_x * 250
+        new_y = new_y * 250
+        z = z * 250
 
     return computeIK(
         x=new_x + params.initLeg[leg_id - 1][0],

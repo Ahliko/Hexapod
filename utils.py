@@ -249,10 +249,13 @@ class SimpleRobot:
 
     def tick_read_and_write(self, constants: Constants, verbose=False):
         # Creating a list for a read request and a dict for a write request
-        self.tick_read(constants)
-        self.tick_write(constants)
-        if verbose:
-            print("IO tick done")
+        try:
+            self.tick_read(constants)
+            self.tick_write(constants)
+            if verbose:
+                print("IO tick done")
+        finally:
+            pass
 
     def smooth_tick_read_and_write(self, delay, constants: Constants, verbose=False):
         # Reads the current state of the robot and applies the write positions smoothly over 'time'
@@ -749,13 +752,14 @@ def get_controller_input(controller, constants: Constants, use_rads=None):
     right_x = controller.get_axis(2)
     right_y = controller.get_axis(3)
 
+
     deadzone = 0.15
     if abs(left_x) < deadzone and abs(left_y) < deadzone:
         direction_angle = None
     else:
         direction_angle = math.atan2(left_y, left_x)
-        if not use_rads:
-            direction_angle = math.degrees(direction_angle)
+        # if not use_rads:
+        #     direction_angle = math.degrees(direction_angle)
 
     speed_multiplier = 1.0
     if abs(right_y) > deadzone:
@@ -763,6 +767,7 @@ def get_controller_input(controller, constants: Constants, use_rads=None):
         speed_multiplier = max(0.1, min(10, speed_multiplier))
         print(speed_multiplier)
 
+    print(direction_angle)
     return direction_angle, speed_multiplier
 
 
@@ -781,7 +786,6 @@ def myTriangle(x: float, z: float, h: float, w: float, params, leg_id,
     robot.legs[leg_id][0].goal_position = alphas[0]
     robot.legs[leg_id][1].goal_position = alphas[1]
     robot.legs[leg_id][2].goal_position = alphas[2]
-    print(robot)
     if type(robot) is SimpleRobot:
         return
     pos = computeDK(alphas[0], alphas[1], alphas[2], use_rads=True, constants=constants)
@@ -854,12 +858,13 @@ def run_triangle(controls, controller, myEvent, robot, sim, params, isSim, const
     else:
         x = 0
         z = -0.1
-        h = 0.1
-        w = 0.05
+        h = 0.2
+        w = 0.1
         speed = 1
     controller_angle, speed_multiplier = get_controller_input(controller, constants=constants)
-    print(controller_angle, speed_multiplier)
-    leg_angle = controller_angle if controller_angle is not None else (getAngleDirection(
+    if controller_angle is None:
+        return
+    leg_angle = controller_angle if not isSim else (getAngleDirection(
         myEvent) if sim is not None else 0)
 
     if speed_multiplier is not None:

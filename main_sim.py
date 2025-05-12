@@ -9,6 +9,9 @@ import pypot.dynamixel
 
 from constants import Constants
 
+STOP = False
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -44,9 +47,9 @@ def main():
         else:
             dxl_io = pypot.dynamixel.DxlIO('/dev/ttyACM0', baudrate=1000000)
             sim = None
-            constants.ROBOT_TYPE=constants.PHANTOMX
+            constants.ROBOT_TYPE = constants.PHANTOMX
             constants.update()
-            robot : utils.SimpleRobot = utils.SimpleRobot(dxl_io, constants)
+            robot: utils.SimpleRobot = utils.SimpleRobot(dxl_io, constants)
             params = utils.Parameters(
                 constants=constants,
                 freq=50,
@@ -73,7 +76,6 @@ def main():
         # print(utils.computeIKOriented(0.2, 0, 0, 1, constants, params))
         # print(kinematics2.computeIKOriented(0.2, 0, 0, 1, params=params))
 
-
         # while True:
         #     continue
         for i in range(1, 7):
@@ -94,9 +96,17 @@ def main():
         sim.setRobotPose([0, 0, 0.5], [0, 0, 0, 1]) if sim is not None else None
 
         while True:
+            if STOP or controller.get_button(9):
+                robot.disable_torque([robot.motors()[i].id for i in range(len(robot.motors()))])
+                pygame.quit()
+                return
             my_event = p.getKeyboardEvents() if sim is not None else None
             pygame.event.pump()
-            if (my_event is not None and -1 in my_event and my_event[-1] & p.KEY_WAS_RELEASED) or controller.get_button(0) if controller is not None else False:
+            if controller.get_button(1):
+                robot.disable_torque([robot.motors()[i].id for i in range(len(robot.motors()))])
+                continue
+            if (my_event is not None and -1 in my_event and my_event[-1] & p.KEY_WAS_RELEASED) or controller.get_button(
+                    0) if controller is not None else False:
                 if controller.get_button(0) if controller is not None else False:
                     time.sleep(0.1)
                     pygame.event.pump()
@@ -113,16 +123,19 @@ def main():
                 else:
                     mode_actuel = utils.Mode.TRIANGLE
                     controls = utils.init_triangle(controls, sim is not None)
-
             if mode_actuel == utils.Mode.INVERSE:
                 utils.run_inverse(controls, sim, robot, params, constants=constants) if sim is not None else None
             elif mode_actuel == utils.Mode.TRIANGLE:
-                utils.run_triangle(controls, controller, my_event, robot, sim, params, sim is not None, constants=constants)
+                if controller.get_button(7):
+                    utils.run_triangle(controls, controller, my_event, robot, sim, params, sim is not None,
+                                       constants=constants)
+                else:
+                    utils.get_controller_input(controller, constants=constants)
             elif mode_actuel == utils.Mode.DIRECT:
                 utils.run_direct(sim, robot, params, constants)
 
             robot.tick_read_and_write(constants=constants)
-            print(robot)
+            # print(robot)
 
             robot.tickSim() if sim is not None else None
             pygame.event.pump()
@@ -133,4 +146,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        STOP = True
