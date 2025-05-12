@@ -27,7 +27,7 @@ Clone le dépôt :
 
 Installe les dépendances requises :
 
-    pip install numpy pygame pybullet onshape-to-robot transforms3d scipy pipot
+    pip install numpy pygame pybullet onshape-to-robot transforms3d scipy pypot
 
 <h2>🚀 Utilisation</h2>
 
@@ -37,6 +37,8 @@ Pour lancer la simulation :
 
 
 Assure-toi que tous les modules nécessaires sont correctement installés et configurés.
+
+Fonctionne avec une manette de PS4 (DualShock 4) pour l'utilisation du script.
 
 <h2>🧠 Fonctionnalités</h2>
 
